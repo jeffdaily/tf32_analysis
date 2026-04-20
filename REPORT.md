@@ -241,15 +241,16 @@ values quantized.
 well under 0.005, so CUDA is safe at the current tolerance. For
 ROCm the AMD-XF32 ideal model (5.2e-3) marginally exceeds 0.005 and
 MI300's realized value is seed-dependent — some runs pass, some fail.
-Recommended disposition: drop the pre-test `test_cuda` skip and
-bump the ROCm tolerance:
+Applied to **both** the no_bias variant (`common_nn.py:116-128`) and
+the with-bias variant (`common_nn.py:106-115`) because direct
+measurement on MI300 confirmed the with-bias variant flakes too: a
+non-default seed produced `max_abs = 6.17e-3 > 0.005`, matching
+#155216's reported 5/5 pass/fail ratio. Fix:
 
     tf32_precision=0.01 if TEST_WITH_ROCM else 0.005
 
-0.01 gives ~2× margin over the AMD-XF32 envelope. The with-bias
-variant at `common_nn.py:106-115` has the same K=10 shape and is
-similarly at-risk but currently passes empirically; leave it alone
-unless it starts flaking.
+0.01 gives ~2× margin over the AMD-XF32 envelope; 5/5 passes after
+the change.
 
 ### 3.2 Conv k=1
 
