@@ -101,12 +101,23 @@ paper's prediction exactly.
 ### Convolution path
 
 `aten/src/ATen/native/miopen/Conv_miopen.cpp` contains no TF32 path:
-**MIOpen forward conv on MI300 always runs full IEEE FP32**. So
-`test_Conv2d_size_1_kernel` failures cannot come from forward conv;
-they come from the backward pass, which uses a GEMM. The harness
-confirms this: forward `max_abs = 1.24e-3`, weight gradient
-`max_abs = 5.87e-3`. Only the gradient (a `(3, 50) @ (50, 3)` GEMM
-with K=50) breaches the 0.005 tolerance.
+**MIOpen forward conv on MI300 always runs full IEEE FP32**. But the
+`test_Conv2d_size_1_kernel` test disables cuDNN/MIOpen via
+`with cudnn.flags(enabled=False):`, forcing the conv through the
+ATen fallback at `aten/src/ATen/native/cuda/ConvolutionMM2d.cu`
+(`slow_conv2d_forward` / `slow_conv2d_grad_weight`). Those call
+`at::cuda::blas::gemm` directly, which on ROCm routes through
+hipBLASLt with `HIPBLAS_COMPUTE_32F_FAST_TF32` when `allow_tf32=True`.
+
+The fallback path does per-batch GEMMs with FP32 cross-batch
+accumulation (alpha=1, beta=1). For this test:
+* forward: K = nInputPlane = 3 per GEMM, 2 independent batches.
+* weight grad: K = outputH*outputW = 25 per GEMM, 2 batches accumulated
+  in FP32 (total reduction length 50, but rounding happens inside K=25
+  chunks with plain FP32 across-batch accumulation).
+
+The harness models this per-batch structure. Only the weight gradient
+breaches 0.005 tolerance.
 
 ---
 
@@ -123,8 +134,8 @@ effective floor when no explicit `atol` is larger.
 | `test_compile_kernel_advanced` | 32 | 0.005 | **8.2e-3** | 1.9e-3 | 8.2e-3 | **3.8e-6** | **(2) MI300 = AMD XF32 spec** — bit-identical to RD model |
 | `test_broadcast_batched_matmul` | 8 | 0.001 | **8.1e-3** | 3.4e-3 | 6.1e-3 | 1.4e-2 | **(1) tol far below E8M10 floor** |
 | `Linear-no-bias` (#155216) | 10 | 0.005 | 4.0e-3 | 2.3e-3 | 5.2e-3 | 9.2e-3 | **(2) right at edge** — flaky, AMD-ideal already at tol |
-| `test_Conv2d_size_1_kernel` (forward) | 3 | 0.005 | 1.2e-3 | — | — | — | passes (K=3 too small to break tol) |
-| `test_Conv2d_size_1_kernel` (weight grad) | 50 | 0.005 | **5.9e-3** | — | — | — | **(2)** — grad GEMM has K=50 |
+| `test_Conv2d_size_1_kernel` (forward) | 3 | 0.005 | 1.2e-3 | 0.5e-3 | 1.9e-3 | 2.4e-3 | passes (K=3 too small to break tol) |
+| `test_Conv2d_size_1_kernel` (weight grad) | 25/batch | 0.005 | **5.9e-3** | 2.7e-3 | 1.2e-2 | 8.4e-3 | **(2)** — NV-TF32 would pass; AMD RD-bias dominates |
 | `test_cdist_large` (use_mm modes) | 10 | 0.005 | **5.8e-3** | — | — | — | **(2)** — only mm-path modes affected; brute force = exact |
 | `test_tensordot` (random K=20) | 20 | 0.005 | **1.3e-2** | — | — | — | **(2)** — K=20 contraction over multi-dim |
 | `test_old_cholesky` (recon, fp32) | 10 | 0.01 | **2.1e-2** | 1.0e-2 | 1.8e-2 | — | **(3)** — amplified by `cond(A)≈30` |
@@ -223,20 +234,36 @@ flagged in #155216.
 
 `test_Conv2d_size_1_kernel` runs forward + backward on
 `Conv2d(3, 3, kernel_size=1)` over input `(2, 3, 5, 5)`, with cuDNN
-disabled — so PyTorch falls back to a GEMM-based conv path on ROCm.
+disabled — so PyTorch falls back to `slow_conv2d_forward` /
+`slow_conv2d_grad_weight`, both of which call `at::cuda::blas::gemm`
+per batch (alpha=1, beta=1). On ROCm that routes through hipBLASLt
+with `FAST_TF32`. Per-batch GEMM sizes:
 
-| component | K | MI300 TF32 max_abs | breach |
-|---|---:|---:|---|
-| forward output | 3 | 1.2e-3 | under 0.005 |
-| weight gradient | 50 (= 2*5*5) | **5.9e-3** | **17% over 0.005** |
-| bias gradient | n/a | 0.0 | exact |
+* forward: m=3 (C_out), n=25 (H*W), **K=3** (C_in)
+* weight grad: m=3 (C_out), n=3 (C_in), **K=25** (H*W), accumulated
+  across 2 batches in FP32
 
-Forward is `(in_chan=3) @ ...` so K=3, well under the floor. Weight
-gradient is `grad_output^T @ input` with effective K = batch*H*W = 50,
-and it just exceeds the 0.005 tolerance — entirely explained by the
-larger K of the gradient GEMM.
+| component | GEMM K | MI300 TF32 | ideal NV-TF32 | ideal AMD-XF32 | MI300 vs AMD-ideal |
+|---|---:|---:|---:|---:|---:|
+| forward output | 3 | 1.2e-3 | 0.5e-3 | 1.9e-3 | 2.4e-3 |
+| weight gradient | 25/batch | **5.9e-3** | 2.7e-3 | 1.2e-2 | 8.4e-3 |
+| bias gradient | n/a | 0.0 | 0.0 | 0.0 | 0.0 |
 
-**Verdict:** Category 2. Same recommendation. The
+Forward: all three models pass 0.005 (K=3 is well below the E8M10 floor).
+
+Weight gradient: **ideal NV-TF32 at 2.7e-3 would comfortably pass the
+0.005 tolerance — only AMD's round-down accumulation breaches it.**
+MI300 TF32 measures at 5.9e-3 (mean_signed -2.1e-3), between ideal
+NV-TF32 and the naive input-rounding AMD model. The input-rounding
+model overestimates at 1.2e-2 because FDRDA's in-accumulator rounding
+is gentler than rounding both operands before the dot product (see
+Limitations §1). The negative mean-signed error and the ~2× gap to
+NV-TF32 are both the documented AMD XF32 round-down signature.
+
+**Verdict:** Category 2, AMD-specific. NV-TF32 would pass the existing
+0.005 tolerance, so this is not a case for a global tolerance bump — a
+ROCm-conditional disposition (either `precision="highest"` on HIP, or
+a ROCm-conditional tolerance ≥ 0.01) is appropriate. The
 `test_ConvTranspose2d_size_1_kernel` case is structurally identical.
 
 ### 3.3 cdist

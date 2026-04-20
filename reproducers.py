@@ -44,6 +44,7 @@ import torch
 
 sys.path.insert(0, "/var/lib/jenkins/pytorch/agent_space/tf32_analysis")
 
+from e8m10 import e8m10_round_rd, e8m10_round_rne
 from tf32_gemm_ref import (
     error_stats,
     gemm_fp64,
@@ -254,6 +255,50 @@ def repro_linear_no_bias_common_nn() -> dict:
     }
 
 
+def _slow_conv2d_k1_forward_rounded(x, weight, bias, round_fn):
+    """Model slow_conv2d_forward for k=1 conv with per-operand rounding.
+
+    Mirrors aten/src/ATen/native/cuda/ConvolutionMM2d.cu: per-batch GEMM
+    with alpha=1, beta=1 accumulating into (initially bias-copied) output.
+    Rounds the GEMM operands (input and weight) to E8M10 via round_fn
+    before each per-batch GEMM, then accumulates in FP32.
+    """
+    B, C_in, H, W = x.shape
+    C_out = weight.shape[0]
+    W_flat = weight.reshape(C_out, C_in)
+    y = torch.empty(B, C_out, H, W, dtype=torch.float32)
+    if bias is not None:
+        y[:] = bias.reshape(1, C_out, 1, 1)
+    else:
+        y.zero_()
+    W_flat_r = round_fn(W_flat)
+    for b in range(B):
+        x_b = x[b].reshape(C_in, H * W)
+        x_b_r = round_fn(x_b)
+        y[b] += (W_flat_r @ x_b_r).reshape(C_out, H, W)
+    return y
+
+
+def _slow_conv2d_k1_grad_weight_rounded(grad_output, x, round_fn):
+    """Model slow_conv2d_grad_weight for k=1 conv with per-operand rounding.
+
+    Mirrors the CUDA path: per-batch GEMM (t,n) with K=outputH*outputW,
+    alpha=1, beta=1 so results accumulate into grad_weight in FP32 across
+    batches. Rounds grad_output and input to E8M10 within each per-batch
+    GEMM; cross-batch accumulation is plain FP32.
+    """
+    B, C_out, H, W = grad_output.shape
+    C_in = x.shape[1]
+    grad_w = torch.zeros(C_out, C_in, dtype=torch.float32)
+    for b in range(B):
+        x_b = x[b].reshape(C_in, H * W)
+        g_b = grad_output[b].reshape(C_out, H * W)
+        x_b_r = round_fn(x_b)
+        g_b_r = round_fn(g_b)
+        grad_w += g_b_r @ x_b_r.T
+    return grad_w.reshape(C_out, C_in, 1, 1)
+
+
 def repro_conv2d_k1() -> dict:
     """test_convolution.py::test_Conv2d_size_1_kernel.
     Forward: Conv2d(3,3,k=1) on (2,3,5,5). With cudnn.flags(enabled=False),
@@ -268,6 +313,9 @@ def repro_conv2d_k1() -> dict:
     y_cpu.backward(grad_y)
     bias_grad_cpu = conv_cpu.bias.grad.data.clone()
     weight_grad_cpu = conv_cpu.weight.grad.data.clone()
+
+    weight_cpu = conv_cpu.weight.data.detach().clone()
+    bias_cpu = conv_cpu.bias.data.detach().clone()
 
     def gpu_run(allow_tf32: bool, dtype_promote_input_double: bool):
         with tf32_mode(allow_tf32):
@@ -292,6 +340,13 @@ def repro_conv2d_k1() -> dict:
     y_tf32, wg_tf32, bg_tf32 = gpu_run(True, False)
     y_ref, wg_ref, bg_ref = gpu_run(False, True)  # FP64 ground truth on GPU
 
+    # Ideal NV-TF32 / AMD-XF32 references modelling the per-batch GEMM
+    # structure of slow_conv2d_forward / slow_conv2d_grad_weight.
+    y_nv = _slow_conv2d_k1_forward_rounded(x_cpu, weight_cpu, bias_cpu, e8m10_round_rne)
+    y_amd = _slow_conv2d_k1_forward_rounded(x_cpu, weight_cpu, bias_cpu, e8m10_round_rd)
+    wg_nv = _slow_conv2d_k1_grad_weight_rounded(grad_y, x_cpu, e8m10_round_rne)
+    wg_amd = _slow_conv2d_k1_grad_weight_rounded(grad_y, x_cpu, e8m10_round_rd)
+
     return {
         "test_id": "test/nn/test_convolution.py::TestConvolutionNNDeviceType::test_Conv2d_size_1_kernel",
         "issue": None,
@@ -299,12 +354,18 @@ def repro_conv2d_k1() -> dict:
         "tol_atol": 0.005,
         "tol_origin": "tf32_on_and_off(0.005); explicit assertEqual atol=1e-5 dominated by self.precision via max()",
         "shapes": {"input": [2, 3, 5, 5], "weight": [3, 3, 1, 1]},
-        "K": 3,  # in_channels for forward; for weight grad it's spatial 2*5*5=50
+        "K": 3,  # forward: C_in=3; weight grad: per-batch H*W=25, batch-accumulated in FP32
         "errors": {
             "forward_mi300_fp32_vs_fp64": error_stats(y_fp32, y_ref),
             "forward_mi300_tf32_vs_fp64": error_stats(y_tf32, y_ref),
+            "forward_ideal_nv_tf32_vs_fp64": error_stats(y_nv, y_ref),
+            "forward_ideal_amd_xf32_vs_fp64": error_stats(y_amd, y_ref),
+            "forward_mi300_tf32_vs_ideal_amd": error_stats(y_tf32, y_amd),
             "weight_grad_mi300_fp32_vs_fp64": error_stats(wg_fp32, wg_ref),
             "weight_grad_mi300_tf32_vs_fp64": error_stats(wg_tf32, wg_ref),
+            "weight_grad_ideal_nv_tf32_vs_fp64": error_stats(wg_nv, wg_ref),
+            "weight_grad_ideal_amd_xf32_vs_fp64": error_stats(wg_amd, wg_ref),
+            "weight_grad_mi300_tf32_vs_ideal_amd": error_stats(wg_tf32, wg_amd),
             "bias_grad_mi300_fp32_vs_fp64": error_stats(bg_fp32, bg_ref),
             "bias_grad_mi300_tf32_vs_fp64": error_stats(bg_tf32, bg_ref),
             "forward_mi300_tf32_vs_cpu": error_stats(y_tf32, y_cpu),
