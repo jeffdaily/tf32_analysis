@@ -697,105 +697,94 @@ def repro_lstm_short() -> dict:
 
 def repro_transformer_encoder_fastpath() -> dict:
     """test_transformers.py::test_transformerencoder_fastpath.
-    Compare fastpath (BetterTransformer fused kernel) vs slowpath (Python
-    forward) for a small encoder. Build the encoder ONCE, then pin the
-    same weights and same input across all four runs. Tolerance: 0.001 abs.
+
+    The *actual* test assertion is fastpath_output == slowpath_output under
+    the current precision mode — NOT TF32 output vs FP32 reference. Both
+    paths run under TF32 when TF32 is enabled; the tolerance only applies
+    to their mutual agreement. This distinction matters: fast-vs-slow is
+    a much smaller quantity than TF32-vs-FP32, and the test can pass
+    comfortably even when individual paths each differ from FP64 by more
+    than the tolerance.
+
+    The actual test uses num_layers=2, eval mode, and several input/mask
+    pairs up to seqlen=1040. The worst fast-vs-slow delta on MI300 comes
+    from the long-sequence cases (seqlen >= 1024), so the reproducer
+    pins those shapes as well as the original small case for context.
+    Current test tolerance: @tf32_on_and_off(0.002).
     """
-    torch.manual_seed(7777)
+    torch.manual_seed(1234)  # match the actual test seed
     d_model = 12
     nhead = 4
-    bsz = 3
-    seq_len = 5
+    dim_feedforward = d_model
+    num_layers = 2
 
-    # Build the encoder once on CPU with deterministic weights.
-    layer_proto = torch.nn.TransformerEncoderLayer(
-        d_model=d_model, nhead=nhead, dim_feedforward=24, batch_first=True,
-        dropout=0.0,
-    )
-    enc_proto = torch.nn.TransformerEncoder(layer_proto, num_layers=1)
-    enc_proto.eval()
-    state = {k: v.detach().clone() for k, v in enc_proto.state_dict().items()}
-    inp_cpu = torch.randn(bsz, seq_len, d_model, dtype=torch.float32)
+    # Mirror the test's input_mask_pairs exactly (small + several long-seqlen).
+    input_mask_pairs = [
+        (3, 2, [[0, 1], [0, 1], [1, 1]]),
+        (2, 100, [[0] * 98 + [1] * 2, [0] * 90 + [1] * 10]),
+        (2, 1024, [[0] * 1020 + [1] * 4, [0] * 1024]),
+        (1, 1026, [[0] * 1024 + [1] * 2]),
+        (4, 1040, [
+            [0] * 1024 + [1] * 16, [0] * 1025 + [1] * 15,
+            [0] * 1031 + [1] * 9, [0] * 1040,
+        ]),
+    ]
 
-    def make_enc(double=False, eval_mode=True):
-        layer = torch.nn.TransformerEncoderLayer(
-            d_model=d_model, nhead=nhead, dim_feedforward=24, batch_first=True,
-            dropout=0.0,
+    def build_model():
+        return torch.nn.TransformerEncoder(
+            torch.nn.TransformerEncoderLayer(
+                d_model=d_model, nhead=nhead, dim_feedforward=dim_feedforward,
+                batch_first=True,
+            ),
+            num_layers=num_layers,
         )
-        e = torch.nn.TransformerEncoder(layer, num_layers=1)
-        e.load_state_dict(state)
-        e = e.to("cuda")
-        if double:
-            e = e.double()
-        if eval_mode:
-            e.eval()
-        else:
-            e.train()
-        return e
 
-    def run(allow_tf32, fastpath, double=False):
-        e = make_enc(double=double, eval_mode=fastpath)
+    model = build_model().eval().cuda()
+
+    def fast_slow_delta(bsz, seqlen, masks, allow_tf32):
+        x = torch.rand(bsz, seqlen, d_model, device="cuda")
+        m = torch.tensor(masks, dtype=torch.bool, device="cuda")
         with tf32_mode(allow_tf32):
-            x = inp_cpu.to("cuda")
-            if double:
-                x = x.double()
             with torch.no_grad():
-                y = e(x)
-        return y.detach().to("cpu").float()
+                fp = model(x, src_key_padding_mask=m)
+            sp = model(x, src_key_padding_mask=m)
+            bs, trueseq, embed = fp.shape
+            exp = torch.zeros(bs, m.shape[1], embed, device="cuda")
+            exp[:, :trueseq, :] = fp
+            exp = exp.masked_fill(m.unsqueeze(-1), 0)
+            sp = sp.masked_fill(m.unsqueeze(-1), 0)
+            return (exp - sp).abs().max().item()
 
-    def run_cpu_sim(round_fn):
-        # Forces the Python slowpath by using train() mode, then optionally
-        # rounds matmul operands via the supplied round_fn (None = plain FP32).
-        layer = torch.nn.TransformerEncoderLayer(
-            d_model=d_model, nhead=nhead, dim_feedforward=24, batch_first=True,
-            dropout=0.0,
-        )
-        e = torch.nn.TransformerEncoder(layer, num_layers=1)
-        e.load_state_dict(state)
-        e.train()
-        with torch.no_grad():
-            if round_fn is None:
-                y = e(inp_cpu)
-            else:
-                with matmul_tf32_sim(round_fn):
-                    y = e(inp_cpu)
-        return y.detach().float()
+    # Record the per-shape deltas to find the worst case.
+    per_shape_fp32 = {}
+    per_shape_tf32 = {}
+    for bsz, seqlen, masks in input_mask_pairs:
+        # Different torch seeds to produce a different random input per shape,
+        # matching the test loop's independent torch.rand() calls.
+        per_shape_fp32[f"seqlen_{seqlen}"] = fast_slow_delta(bsz, seqlen, masks, False)
+        per_shape_tf32[f"seqlen_{seqlen}"] = fast_slow_delta(bsz, seqlen, masks, True)
 
-    y_fp32_slow = run(False, fastpath=False)
-    y_tf32_slow = run(True, fastpath=False)
-    y_fp32_fast = run(False, fastpath=True)
-    y_tf32_fast = run(True, fastpath=True)
-    y_ref = run(False, fastpath=False, double=True)
-    y_cpu_fp32 = run_cpu_sim(None)
-    y_cpu_ideal_nv = run_cpu_sim(e8m10_round_rne)
-    y_cpu_ideal_amd = run_cpu_sim(e8m10_round_rd)
+    worst_fp32 = max(per_shape_fp32.values())
+    worst_tf32 = max(per_shape_tf32.values())
 
     return {
         "test_id": "test/test_transformers.py::TestTransformers::test_transformerencoder_fastpath",
         "issue": None,
-        "op": "TransformerEncoder (fastpath vs slowpath; same weights/input)",
-        "tol_atol": 0.001,
-        "tol_origin": "tf32_on_and_off(0.001)",
-        "shapes": {"input": [bsz, seq_len, d_model], "nhead": nhead},
+        "op": "TransformerEncoder (fastpath vs slowpath) — the test asserts "
+              "fastpath == slowpath under the current precision; tolerance is "
+              "between two TF32-rounded outputs, NOT TF32 vs FP32",
+        "tol_atol": 0.002,
+        "tol_origin": "tf32_on_and_off(0.002)",
+        "shapes": [f"({bsz}, {seqlen}, {d_model})" for bsz, seqlen, _ in input_mask_pairs],
         "K": d_model,
         "errors": {
-            "slow_fp32_vs_fp64": error_stats(y_fp32_slow, y_ref),
-            "slow_tf32_vs_fp64": error_stats(y_tf32_slow, y_ref),
-            "fast_fp32_vs_fp64": error_stats(y_fp32_fast, y_ref),
-            "fast_tf32_vs_fp64": error_stats(y_tf32_fast, y_ref),
-            "fast_vs_slow_tf32": error_stats(y_tf32_fast, y_tf32_slow),
-            "fast_vs_slow_fp32": error_stats(y_fp32_fast, y_fp32_slow),
-            "tf32_vs_fp32_slow": error_stats(y_tf32_slow, y_fp32_slow),
-            "tf32_vs_fp32_fast": error_stats(y_tf32_fast, y_fp32_fast),
-            "cpu_fp32_vs_fp64": error_stats(y_cpu_fp32, y_ref),
-            "cpu_ideal_nv_tf32_vs_fp64": error_stats(y_cpu_ideal_nv, y_ref),
-            "cpu_ideal_amd_xf32_vs_fp64": error_stats(y_cpu_ideal_amd, y_ref),
-            "cpu_ideal_nv_tf32_vs_cpu_fp32": error_stats(y_cpu_ideal_nv, y_cpu_fp32),
-            "cpu_ideal_amd_xf32_vs_cpu_fp32": error_stats(y_cpu_ideal_amd, y_cpu_fp32),
-            "mi300_tf32_vs_cpu_ideal_amd_slow": error_stats(y_tf32_slow, y_cpu_ideal_amd),
+            "fast_vs_slow_fp32_per_shape": per_shape_fp32,
+            "fast_vs_slow_tf32_per_shape": per_shape_tf32,
+            "fast_vs_slow_fp32_worst": worst_fp32,
+            "fast_vs_slow_tf32_worst": worst_tf32,
         },
         "floor": {"symmetric_floor": math.sqrt(d_model) * 2 ** -10, "K": d_model},
-        "verdict_hint": "compares fastpath vs slowpath under same weights",
+        "verdict_hint": f"worst fast-vs-slow TF32: {worst_tf32:.2e} vs tol 0.002",
     }
 
 

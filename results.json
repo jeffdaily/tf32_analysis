@@ -1134,206 +1134,39 @@
   "transformer_encoder_fastpath": {
     "K": 12,
     "errors": {
-      "cpu_fp32_vs_fp64": {
-        "actual_max_abs": 2.1709883213043213,
-        "max_abs": 2.384185791015625e-07,
-        "max_rel": 2.8871656468254514e-05,
-        "mean_signed": 1.3465372150633925e-09,
-        "ref_max_abs": 2.1709883213043213,
-        "rms_abs": 9.153758297168958e-08,
-        "shape": [
-          3,
-          5,
-          12
-        ]
+      "fast_vs_slow_fp32_per_shape": {
+        "seqlen_100": 7.152557373046875e-07,
+        "seqlen_1024": 9.5367431640625e-07,
+        "seqlen_1026": 7.152557373046875e-07,
+        "seqlen_1040": 7.152557373046875e-07,
+        "seqlen_2": 0.0
       },
-      "cpu_ideal_amd_xf32_vs_cpu_fp32": {
-        "actual_max_abs": 2.171065330505371,
-        "max_abs": 0.0007851123809814453,
-        "max_rel": 0.0738794282078743,
-        "mean_signed": -1.493996593104896e-09,
-        "ref_max_abs": 2.1709883213043213,
-        "rms_abs": 0.00027886869392181843,
-        "shape": [
-          3,
-          5,
-          12
-        ]
+      "fast_vs_slow_fp32_worst": 9.5367431640625e-07,
+      "fast_vs_slow_tf32_per_shape": {
+        "seqlen_100": 0.0007531046867370605,
+        "seqlen_1024": 0.0007823258638381958,
+        "seqlen_1026": 0.0006625354290008545,
+        "seqlen_1040": 0.0008126795291900635,
+        "seqlen_2": 0.0
       },
-      "cpu_ideal_amd_xf32_vs_fp64": {
-        "actual_max_abs": 2.171065330505371,
-        "max_abs": 0.0007851719856262207,
-        "max_rel": 0.0738484263420105,
-        "mean_signed": -1.4745940579707906e-10,
-        "ref_max_abs": 2.1709883213043213,
-        "rms_abs": 0.0002788633472760277,
-        "shape": [
-          3,
-          5,
-          12
-        ]
-      },
-      "cpu_ideal_nv_tf32_vs_cpu_fp32": {
-        "actual_max_abs": 2.1709136962890625,
-        "max_abs": 0.00042116641998291016,
-        "max_rel": 0.049192313104867935,
-        "mean_signed": -6.205583602536535e-09,
-        "ref_max_abs": 2.1709883213043213,
-        "rms_abs": 0.00012396985417384838,
-        "shape": [
-          3,
-          5,
-          12
-        ]
-      },
-      "cpu_ideal_nv_tf32_vs_fp64": {
-        "actual_max_abs": 2.1709136962890625,
-        "max_abs": 0.00042110681533813477,
-        "max_rel": 0.0492197647690773,
-        "mean_signed": -4.859046054406235e-09,
-        "ref_max_abs": 2.1709883213043213,
-        "rms_abs": 0.00012397204453382533,
-        "shape": [
-          3,
-          5,
-          12
-        ]
-      },
-      "fast_fp32_vs_fp64": {
-        "actual_max_abs": 2.170988082885742,
-        "max_abs": 2.384185791015625e-07,
-        "max_rel": 8.745356353756506e-06,
-        "mean_signed": 1.751274503192235e-08,
-        "ref_max_abs": 2.1709883213043213,
-        "rms_abs": 8.528726455367671e-08,
-        "shape": [
-          3,
-          5,
-          12
-        ]
-      },
-      "fast_tf32_vs_fp64": {
-        "actual_max_abs": 2.1707510948181152,
-        "max_abs": 0.0025538206100463867,
-        "max_rel": 0.4864920675754547,
-        "mean_signed": 1.9164549058814373e-08,
-        "ref_max_abs": 2.1709883213043213,
-        "rms_abs": 0.0007449350153089226,
-        "shape": [
-          3,
-          5,
-          12
-        ]
-      },
-      "fast_vs_slow_fp32": {
-        "actual_max_abs": 2.170988082885742,
-        "max_abs": 2.384185791015625e-07,
-        "max_rel": 2.0167317416053265e-06,
-        "mean_signed": 5.2587387777691674e-09,
-        "ref_max_abs": 2.1709883213043213,
-        "rms_abs": 7.108084413503918e-08,
-        "shape": [
-          3,
-          5,
-          12
-        ]
-      },
-      "fast_vs_slow_tf32": {
-        "actual_max_abs": 2.1707510948181152,
-        "max_abs": 0.0003470182418823242,
-        "max_rel": 0.017870968207716942,
-        "mean_signed": 1.1499893481925483e-08,
-        "ref_max_abs": 2.170757293701172,
-        "rms_abs": 0.00011462196248128482,
-        "shape": [
-          3,
-          5,
-          12
-        ]
-      },
-      "mi300_tf32_vs_cpu_ideal_amd_slow": {
-        "actual_max_abs": 2.170757293701172,
-        "max_abs": 0.0023283958435058594,
-        "max_rel": 0.5218886733055115,
-        "mean_signed": 7.812761992909145e-09,
-        "ref_max_abs": 2.171065330505371,
-        "rms_abs": 0.0007159228270197018,
-        "shape": [
-          3,
-          5,
-          12
-        ]
-      },
-      "slow_fp32_vs_fp64": {
-        "actual_max_abs": 2.1709883213043213,
-        "max_abs": 2.384185791015625e-07,
-        "max_rel": 9.883450729830656e-06,
-        "mean_signed": 1.2254005810063973e-08,
-        "ref_max_abs": 2.1709883213043213,
-        "rms_abs": 9.15126361344362e-08,
-        "shape": [
-          3,
-          5,
-          12
-        ]
-      },
-      "slow_tf32_vs_fp64": {
-        "actual_max_abs": 2.170757293701172,
-        "max_abs": 0.002663254737854004,
-        "max_rel": 0.48658090829849243,
-        "mean_signed": 7.665302170778432e-09,
-        "ref_max_abs": 2.1709883213043213,
-        "rms_abs": 0.0008055036262272153,
-        "shape": [
-          3,
-          5,
-          12
-        ]
-      },
-      "tf32_vs_fp32_fast": {
-        "actual_max_abs": 2.1707510948181152,
-        "max_abs": 0.0025539398193359375,
-        "max_rel": 0.48649656772613525,
-        "mean_signed": 1.6530975477380139e-09,
-        "ref_max_abs": 2.170988082885742,
-        "rms_abs": 0.0007449330975759033,
-        "shape": [
-          3,
-          5,
-          12
-        ]
-      },
-      "tf32_vs_fp32_slow": {
-        "actual_max_abs": 2.170757293701172,
-        "max_abs": 0.0026633739471435547,
-        "max_rel": 0.48658597469329834,
-        "mean_signed": -4.589350677264292e-09,
-        "ref_max_abs": 2.1709883213043213,
-        "rms_abs": 0.000805500276731181,
-        "shape": [
-          3,
-          5,
-          12
-        ]
-      }
+      "fast_vs_slow_tf32_worst": 0.0008126795291900635
     },
     "floor": {
       "K": 12,
       "symmetric_floor": 0.0033829117335329633
     },
     "issue": null,
-    "op": "TransformerEncoder (fastpath vs slowpath; same weights/input)",
-    "shapes": {
-      "input": [
-        3,
-        5,
-        12
-      ],
-      "nhead": 4
-    },
+    "op": "TransformerEncoder (fastpath vs slowpath) \u2014 the test asserts fastpath == slowpath under the current precision; tolerance is between two TF32-rounded outputs, NOT TF32 vs FP32",
+    "shapes": [
+      "(3, 2, 12)",
+      "(2, 100, 12)",
+      "(2, 1024, 12)",
+      "(1, 1026, 12)",
+      "(4, 1040, 12)"
+    ],
     "test_id": "test/test_transformers.py::TestTransformers::test_transformerencoder_fastpath",
-    "tol_atol": 0.001,
-    "tol_origin": "tf32_on_and_off(0.001)",
-    "verdict_hint": "compares fastpath vs slowpath under same weights"
+    "tol_atol": 0.002,
+    "tol_origin": "tf32_on_and_off(0.002)",
+    "verdict_hint": "worst fast-vs-slow TF32: 8.13e-04 vs tol 0.002"
   }
 }
