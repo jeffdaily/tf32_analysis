@@ -133,7 +133,7 @@ effective floor when no explicit `atol` is larger.
 | `test_addmm_sizes` (n=10,m=25,k=8) | 8 | 0.005 | **7.4e-3** | 5.6e-3 | 5.4e-3 | 7.8e-3 | **(1) tol below E8M10 floor** — even ideal NV-TF32 exceeds 0.005 |
 | `test_compile_kernel_advanced` | 32 | 0.005 | **8.2e-3** | 1.9e-3 | 8.2e-3 | **3.8e-6** | **(2) MI300 = AMD XF32 spec** — bit-identical to RD model |
 | `test_broadcast_batched_matmul` | 8 | 0.001 | **8.1e-3** | 3.4e-3 | 6.1e-3 | 1.4e-2 | **(1) tol far below E8M10 floor** |
-| `Linear-no-bias` (#155216) | 10 | 0.005 | 4.0e-3 | 2.3e-3 | 5.2e-3 | 9.2e-3 | **(2) right at edge** — flaky, AMD-ideal already at tol |
+| `Linear-no-bias` (#155216) | 10 | 0.005 | 4.0e-3 | 2.3e-3 | **5.2e-3** | 9.2e-3 | **(2) right at edge** — AMD-ideal over tol, MI300 seed-dependent |
 | `test_Conv2d_size_1_kernel` (forward) | 3 | 0.005 | 1.2e-3 | 0.5e-3 | 1.9e-3 | 2.4e-3 | passes (K=3 too small to break tol) |
 | `test_Conv2d_size_1_kernel` (weight grad) | 25/batch | 0.005 | **5.9e-3** | 2.7e-3 | 1.2e-2 | 8.4e-3 | **(2)** — NV-TF32 would pass; AMD RD-bias dominates |
 | `test_cdist_large` (use_mm modes) | 10 | 0.005 | **5.8e-3** | — | — | — | **(2)** — only mm-path modes affected; brute force = exact |
@@ -224,11 +224,19 @@ ratio). The test is sitting **right at the edge** of the AMD XF32
 envelope; whether a given seed passes depends on the specific operand
 values quantized.
 
-**Verdict:** Category 2. Same recommendation as `compile_kernel_advanced`.
-Note: the existing `test_cuda=not (TEST_WITH_ROCM and "gfx94" in ...)`
-pre-test skip in `common_nn.py:125-126` is the right disposition for
-the *no-bias* variant; the *with-bias* variant runs but is the one
-flagged in #155216.
+**Verdict:** Category 2, ROCm-specific. Ideal NV-TF32 at 2.3e-3 is
+well under 0.005, so CUDA is safe at the current tolerance. For
+ROCm the AMD-XF32 ideal model (5.2e-3) marginally exceeds 0.005 and
+MI300's realized value is seed-dependent — some runs pass, some fail.
+Recommended disposition: drop the pre-test `test_cuda` skip and
+bump the ROCm tolerance:
+
+    tf32_precision=0.01 if TEST_WITH_ROCM else 0.005
+
+0.01 gives ~2× margin over the AMD-XF32 envelope. The with-bias
+variant at `common_nn.py:106-115` has the same K=10 shape and is
+similarly at-risk but currently passes empirically; leave it alone
+unless it starts flaking.
 
 ### 3.2 Conv k=1
 
