@@ -349,11 +349,21 @@ The reconstruct error scales with `cond(A) * eps_E8M10`. For
 `cond ≈ 30`, even ideal NV-TF32 sits exactly at the 0.01 tolerance;
 ideal AMD-XF32 exceeds it. MI300 hipBLASLt is consistent with AMD-XF32.
 
-**Verdict:** Category 3 (non-GEMM amplification, here by cond(A)). The
-test is a poor fit for TF32 because its tolerance is implicitly
-calibrated to a specific cond(A) and rounding-mode pair. Recommend:
-either widen tolerance to `0.05 * cond(A)` (for cond≈30, ~0.05) or
-keep this test FP32-only.
+**Verdict:** Category 3 (non-GEMM amplification, here by cond(A)).
+The test's actual purpose is to verify that FP32 cholesky factorization
+is numerically correct — the reconstruct `C @ C.T` is a side-effect
+used to bound the factorization error, not a matmul under test.
+Ideal NV-TF32 sits exactly at the 0.01 tolerance at this cond(A),
+making the CUDA-side pass seed-dependent too; MI300 fails reliably
+due to AMD round-down bias.
+
+Chosen disposition: **`@with_tf32_off`** (vendor-agnostic). Rationale:
+(1) cholesky factorization doesn't use TF32 anyway, so silencing TF32
+doesn't remove meaningful coverage; (2) injecting cond-amplified TF32
+noise into the reconstruct is uncorrelated with what the test verifies;
+(3) removes the latent CUDA flake risk along with the MI300 failure.
+The CPU-side `@reduced_f32_on_and_off(0.01)` decorator is preserved
+since it toggles the orthogonal mkldnn precision setting.
 
 ### 3.6 affine_grid + grid_sample
 
