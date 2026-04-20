@@ -73,6 +73,81 @@ def tf32_mode(enabled: bool):
         torch.backends.cuda.matmul.allow_tf32 = prev_matmul
 
 
+@contextmanager
+def matmul_tf32_sim(round_fn):
+    """Monkey-patch top-level matmul ops to round float32 operands via round_fn.
+
+    Used to simulate ideal NV-TF32 (e8m10_round_rne) or AMD-XF32
+    (e8m10_round_rd) on CPU for ops composed of many internal matmuls
+    (e.g. transformer encoder). Wraps:
+      * torch.matmul, torch.mm, torch.bmm — top-level GEMM entry points
+      * F.linear — used by every nn.Linear in the model
+      * F.scaled_dot_product_attention — re-implemented explicitly as
+        softmax(Q @ K^T / sqrt(d)) @ V with rounding on both matmuls,
+        so the internal attention GEMMs are captured even though the
+        fused op would otherwise skip torch.matmul.
+
+    Dropout/mask/alibi args of SDPA are passed through; the simulation
+    sets need_weights-style behavior aside.
+    """
+    import torch.nn.functional as F
+
+    originals = {
+        "matmul": torch.matmul,
+        "mm": torch.mm,
+        "bmm": torch.bmm,
+        "linear": F.linear,
+        "sdpa": F.scaled_dot_product_attention,
+    }
+
+    def wrap(orig):
+        def wrapped(*args, **kwargs):
+            new_args = tuple(
+                round_fn(a) if isinstance(a, torch.Tensor) and a.dtype == torch.float32 else a
+                for a in args
+            )
+            return orig(*new_args, **kwargs)
+        return wrapped
+
+    def sdpa_sim(query, key, value, attn_mask=None, dropout_p=0.0,
+                 is_causal=False, scale=None, enable_gqa=False):
+        # Explicit Python SDPA with per-matmul rounding.
+        d_k = query.shape[-1]
+        scale = scale if scale is not None else d_k ** -0.5
+        q_r = round_fn(query) if query.dtype == torch.float32 else query
+        k_r = round_fn(key) if key.dtype == torch.float32 else key
+        v_r = round_fn(value) if value.dtype == torch.float32 else value
+        scores = torch.matmul(q_r, k_r.transpose(-2, -1)) * scale
+        if is_causal:
+            L, S = scores.shape[-2], scores.shape[-1]
+            causal_mask = torch.ones(L, S, dtype=torch.bool, device=scores.device).tril_()
+            scores = scores.masked_fill(~causal_mask, float("-inf"))
+        if attn_mask is not None:
+            if attn_mask.dtype == torch.bool:
+                scores = scores.masked_fill(~attn_mask, float("-inf"))
+            else:
+                scores = scores + attn_mask
+        attn = torch.softmax(scores, dim=-1)
+        if dropout_p > 0.0:
+            attn = F.dropout(attn, p=dropout_p)
+        attn_r = round_fn(attn) if attn.dtype == torch.float32 else attn
+        return torch.matmul(attn_r, v_r)
+
+    torch.matmul = wrap(originals["matmul"])
+    torch.mm = wrap(originals["mm"])
+    torch.bmm = wrap(originals["bmm"])
+    F.linear = wrap(originals["linear"])
+    F.scaled_dot_product_attention = sdpa_sim
+    try:
+        yield
+    finally:
+        torch.matmul = originals["matmul"]
+        torch.mm = originals["mm"]
+        torch.bmm = originals["bmm"]
+        F.linear = originals["linear"]
+        F.scaled_dot_product_attention = originals["sdpa"]
+
+
 def _seed(s: int = 0) -> torch.Generator:
     g = torch.Generator(device="cpu").manual_seed(s)
     return g
@@ -668,11 +743,32 @@ def repro_transformer_encoder_fastpath() -> dict:
                 y = e(x)
         return y.detach().to("cpu").float()
 
+    def run_cpu_sim(round_fn):
+        # Forces the Python slowpath by using train() mode, then optionally
+        # rounds matmul operands via the supplied round_fn (None = plain FP32).
+        layer = torch.nn.TransformerEncoderLayer(
+            d_model=d_model, nhead=nhead, dim_feedforward=24, batch_first=True,
+            dropout=0.0,
+        )
+        e = torch.nn.TransformerEncoder(layer, num_layers=1)
+        e.load_state_dict(state)
+        e.train()
+        with torch.no_grad():
+            if round_fn is None:
+                y = e(inp_cpu)
+            else:
+                with matmul_tf32_sim(round_fn):
+                    y = e(inp_cpu)
+        return y.detach().float()
+
     y_fp32_slow = run(False, fastpath=False)
     y_tf32_slow = run(True, fastpath=False)
     y_fp32_fast = run(False, fastpath=True)
     y_tf32_fast = run(True, fastpath=True)
     y_ref = run(False, fastpath=False, double=True)
+    y_cpu_fp32 = run_cpu_sim(None)
+    y_cpu_ideal_nv = run_cpu_sim(e8m10_round_rne)
+    y_cpu_ideal_amd = run_cpu_sim(e8m10_round_rd)
 
     return {
         "test_id": "test/test_transformers.py::TestTransformers::test_transformerencoder_fastpath",
@@ -691,6 +787,12 @@ def repro_transformer_encoder_fastpath() -> dict:
             "fast_vs_slow_fp32": error_stats(y_fp32_fast, y_fp32_slow),
             "tf32_vs_fp32_slow": error_stats(y_tf32_slow, y_fp32_slow),
             "tf32_vs_fp32_fast": error_stats(y_tf32_fast, y_fp32_fast),
+            "cpu_fp32_vs_fp64": error_stats(y_cpu_fp32, y_ref),
+            "cpu_ideal_nv_tf32_vs_fp64": error_stats(y_cpu_ideal_nv, y_ref),
+            "cpu_ideal_amd_xf32_vs_fp64": error_stats(y_cpu_ideal_amd, y_ref),
+            "cpu_ideal_nv_tf32_vs_cpu_fp32": error_stats(y_cpu_ideal_nv, y_cpu_fp32),
+            "cpu_ideal_amd_xf32_vs_cpu_fp32": error_stats(y_cpu_ideal_amd, y_cpu_fp32),
+            "mi300_tf32_vs_cpu_ideal_amd_slow": error_stats(y_tf32_slow, y_cpu_ideal_amd),
         },
         "floor": {"symmetric_floor": math.sqrt(d_model) * 2 ** -10, "K": d_model},
         "verdict_hint": "compares fastpath vs slowpath under same weights",

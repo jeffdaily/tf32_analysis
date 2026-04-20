@@ -141,7 +141,7 @@ effective floor when no explicit `atol` is larger.
 | `test_old_cholesky` (recon, fp32) | 10 | 0.01 | **2.1e-2** | 1.0e-2 | 1.8e-2 | — | **(3)** — amplified by `cond(A)≈30` |
 | `test_affine_2d_rotateRandom` | 3 | 0.005 | **9.1e-2** | — | — | — | **(3)** — bilinear interp amplifies grid drift |
 | `test_variable_sequence` (LSTM) | 7 | 0.005 | 3.0e-8 | — | — | — | passes — tiny LSTM doesn't dispatch to MFMA |
-| `test_transformerencoder_fastpath` | 12 | 0.001 | **2.7e-3** | — | — | — | **(2)** — encoder TF32 vs FP32 differs by 2.5x tol |
+| `test_transformerencoder_fastpath` | 12 | 0.001 | **2.7e-3** | 4.2e-4* | 7.9e-4* | — | **(2)** — *CPU sim underestimates vs MI300 fused kernels |
 | inductor padding-like (K=1024) | 1024 | varies | 1.5e-1 | — | — | — | confirms why test forces "highest" on HIP |
 
 (Issues #162121 and #155216 reduce to `test_max_autotune_contiguous_transform`
@@ -375,11 +375,40 @@ LSTM kernel selection on ROCm appears to fall back to a non-TF32 path
 for these dimensions. **The test would pass on MI300 if not skipped**.
 
 `test_transformerencoder_fastpath` (d_model=12, nhead=4, batch=3,
-seq=5): TF32 vs FP32 difference per encoder pass is `2.7e-3`, vs
-tolerance 0.001. Category 2. The fastpath/slowpath difference under
-TF32 is only `3.5e-4`, so the test as written *would pass* on the
-fast-vs-slow comparison alone — the failure is in the comparison to
-an FP32 reference.
+seq=5) runs a one-layer encoder four ways on GPU (slowpath/fastpath
+x TF32/FP32) and compares TF32 against FP32 with a 0.001 tolerance.
+The encoder path consists of 4 `F.linear` calls (combined QKV
+projection, out-proj, FFN1, FFN2; max K=24 in FFN2) and one
+`F.scaled_dot_product_attention` (internal head_dim K=3, seq K=5).
+
+Apples-to-apples slowpath deltas (TF32 − FP32):
+
+| source | max_abs | tol | notes |
+|---|---:|---:|---|
+| MI300 TF32 vs MI300 FP32 | **2.66e-3** | 0.001 | test fails by ~2.5× |
+| CPU ideal NV-TF32 vs CPU FP32 | 4.2e-4 | — | naive model; passes 0.001 |
+| CPU ideal AMD-XF32 vs CPU FP32 | 7.9e-4 | — | naive model; passes 0.001 |
+
+The CPU simulation monkey-patches `F.linear`, `torch.{mm,bmm,matmul}`,
+and `F.scaled_dot_product_attention` (explicitly unrolled to
+softmax(QK^T/√d) @ V with per-matmul operand rounding). Both ideal
+models stay comfortably under 0.001, yet MI300 exceeds it by ~3×
+the AMD model and ~6× the NV model. This gap beyond the simple
+input-rounding model suggests the GPU-fused attention/transformer
+kernel stack introduces additional rounding steps that neither naive
+CPU simulation captures — the upper bound on "what TF32 costs here"
+is broader than just E8M10 operand quantization.
+
+Crucially, this test is **not** currently skipped on non-MI300 CUDA,
+which is empirical evidence that real NVIDIA TF32 does stay under
+0.001 on the actual fused kernel paths. The failure is therefore
+MI300-specific in practice, even if the naive CPU model doesn't
+cleanly separate NV-TF32 from AMD-XF32 at this scale.
+
+**Verdict:** Category 2, ROCm-specific. Recommended disposition:
+`@tf32_on_and_off(0.005 if TEST_WITH_ROCM else 0.001)` — preserves
+the CUDA tolerance that's empirically validated today and gives ~2×
+margin over the measured MI300 delta.
 
 ### 3.8 Inductor
 
