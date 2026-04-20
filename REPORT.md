@@ -357,13 +357,25 @@ Ideal NV-TF32 sits exactly at the 0.01 tolerance at this cond(A),
 making the CUDA-side pass seed-dependent too; MI300 fails reliably
 due to AMD round-down bias.
 
-Chosen disposition: **`@with_tf32_off`** (vendor-agnostic). Rationale:
-(1) cholesky factorization doesn't use TF32 anyway, so silencing TF32
-doesn't remove meaningful coverage; (2) injecting cond-amplified TF32
-noise into the reconstruct is uncorrelated with what the test verifies;
-(3) removes the latent CUDA flake risk along with the MI300 failure.
-The CPU-side `@reduced_f32_on_and_off(0.01)` decorator is preserved
-since it toggles the orthogonal mkldnn precision setting.
+Chosen disposition: **`@with_highest_f32_precision`** (vendor-agnostic,
+spans CPU and GPU). Rationale: (1) cholesky factorization doesn't use
+reduced-precision matmul anyway, so silencing it doesn't remove
+meaningful coverage; (2) injecting cond-amplified TF32/BF32 noise
+into the reconstruct mm is uncorrelated with what the test verifies;
+(3) removes latent CUDA and CPU-mkldnn flake risks along with the
+MI300 failure.
+
+`with_highest_f32_precision` is a new decorator added to
+`common_utils.py`. It calls `torch.set_float32_matmul_precision("highest")`
+with proper save/restore and is the single-decorator analogue of
+stacking `with_tf32_off` + `with_reduced_f32_off`. The underlying
+`set_float32_matmul_precision("highest")` is effectively unified
+for matmul across CUDA (`allow_tf32 = False`,
+`cuda.matmul.fp32_precision = "ieee"`) and CPU mkldnn
+(`mkldnn.matmul.fp32_precision = "ieee"`), even though the
+historical docstring claims it affects only CUDA. It does NOT
+touch convolution precision knobs; conv-only tests need additional
+`with_tf32_off`-style handling.
 
 ### 3.6 affine_grid + grid_sample
 
