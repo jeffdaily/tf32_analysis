@@ -1,0 +1,1135 @@
+{
+  "addmm_sizes": {
+    "K": 8,
+    "errors": {
+      "ideal_amd_xf32_vs_fp64": {
+        "actual_max_abs": 8.810118675231934,
+        "max_abs": 0.005403995513916016,
+        "max_rel": 0.451972633600235,
+        "mean_signed": -0.00032976685906760395,
+        "ref_max_abs": 8.80787467956543,
+        "rms_abs": 0.0016391101381552581,
+        "shape": [
+          10,
+          25
+        ]
+      },
+      "ideal_nv_tf32_vs_fp64": {
+        "actual_max_abs": 8.806292533874512,
+        "max_abs": 0.005578041076660156,
+        "max_rel": 0.46997886896133423,
+        "mean_signed": 1.9495560991344973e-05,
+        "ref_max_abs": 8.80787467956543,
+        "rms_abs": 0.00085764376194621,
+        "shape": [
+          10,
+          25
+        ]
+      },
+      "mi300_fp32_vs_fp64": {
+        "actual_max_abs": 8.80787467956543,
+        "max_abs": 9.5367431640625e-07,
+        "max_rel": 3.516842843964696e-05,
+        "mean_signed": 5.5870041926198155e-09,
+        "ref_max_abs": 8.80787467956543,
+        "rms_abs": 1.4827468883435295e-07,
+        "shape": [
+          10,
+          25
+        ]
+      },
+      "mi300_tf32_vs_fp64": {
+        "actual_max_abs": 8.802356719970703,
+        "max_abs": 0.0074214935302734375,
+        "max_rel": 0.09009882062673569,
+        "mean_signed": -0.00011694811109919101,
+        "ref_max_abs": 8.80787467956543,
+        "rms_abs": 0.002113586425421506,
+        "shape": [
+          10,
+          25
+        ]
+      },
+      "mi300_tf32_vs_ideal_amd": {
+        "actual_max_abs": 8.802356719970703,
+        "max_abs": 0.007761955261230469,
+        "max_rel": 0.37333449721336365,
+        "mean_signed": 0.00021281874796841294,
+        "ref_max_abs": 8.810118675231934,
+        "rms_abs": 0.0020928759824792235,
+        "shape": [
+          10,
+          25
+        ]
+      },
+      "mi300_tf32_vs_ideal_nv": {
+        "actual_max_abs": 8.802356719970703,
+        "max_abs": 0.008417129516601562,
+        "max_rel": 0.3810107111930847,
+        "mean_signed": -0.0001364436757285148,
+        "ref_max_abs": 8.806292533874512,
+        "rms_abs": 0.0024133613356209804,
+        "shape": [
+          10,
+          25
+        ]
+      }
+    },
+    "floor": {
+      "K": 8,
+      "rd_bias_estimate": 0.031052879959137636,
+      "symmetric_floor": 0.021957701994478065
+    },
+    "issue": null,
+    "op": "addmm (mm part)",
+    "shapes": {
+      "A": [
+        10,
+        8
+      ],
+      "B": [
+        8,
+        25
+      ]
+    },
+    "test_id": "test/test_linalg.py::TestLinalg::test_addmm_sizes",
+    "tol_atol": 0.005,
+    "tol_origin": "tf32_on_and_off(0.005) + reduced_f32_on_and_off(0.005)",
+    "verdict_hint": "tolerance_below_e8m10_floor"
+  },
+  "affine_2d_rotate_random": {
+    "K": 3,
+    "errors": {
+      "grid_mi300_fp32_vs_fp64": {
+        "actual_max_abs": 1.4090598821640015,
+        "max_abs": 1.1920928955078125e-07,
+        "max_rel": 8.77071070135571e-05,
+        "mean_signed": 0.0,
+        "ref_max_abs": 1.4090598821640015,
+        "rms_abs": 4.204396140802576e-08,
+        "shape": [
+          1,
+          64,
+          64,
+          2
+        ]
+      },
+      "grid_mi300_tf32_vs_fp64": {
+        "actual_max_abs": 1.40869140625,
+        "max_abs": 0.0010336637496948242,
+        "max_rel": 0.42625683546066284,
+        "mean_signed": -4.547473508864641e-13,
+        "ref_max_abs": 1.4090598821640015,
+        "rms_abs": 0.0004426497447927103,
+        "shape": [
+          1,
+          64,
+          64,
+          2
+        ]
+      },
+      "out_mi300_fp32_vs_fp64": {
+        "actual_max_abs": 2.516721248626709,
+        "max_abs": 2.0205974578857422e-05,
+        "max_rel": 0.006629019044339657,
+        "mean_signed": 2.1597916344262558e-08,
+        "ref_max_abs": 2.5167148113250732,
+        "rms_abs": 2.690012610394753e-06,
+        "shape": [
+          1,
+          1,
+          64,
+          64
+        ]
+      },
+      "out_mi300_tf32_vs_fp64": {
+        "actual_max_abs": 2.5431509017944336,
+        "max_abs": 0.09114694595336914,
+        "max_rel": 2.693473739593566e+28,
+        "mean_signed": 3.493723488645628e-05,
+        "ref_max_abs": 2.5167148113250732,
+        "rms_abs": 0.01821260830299755,
+        "shape": [
+          1,
+          1,
+          64,
+          64
+        ]
+      }
+    },
+    "floor": {
+      "K": 3,
+      "symmetric_floor": 0.0016914558667664816
+    },
+    "issue": null,
+    "op": "affine_grid + grid_sample (rotation 64x64)",
+    "shapes": {
+      "input": [
+        1,
+        1,
+        64,
+        64
+      ],
+      "theta": [
+        1,
+        2,
+        3
+      ]
+    },
+    "test_id": "test/test_nn.py::TestNNDeviceType::test_affine_2d_rotateRandom",
+    "tol_atol": 0.005,
+    "tol_origin": "tf32_on_and_off(0.005) + reduced_f32_on_and_off(0.005)",
+    "verdict_hint": "K=3 affine GEMM is tiny; bilinear interp dominates"
+  },
+  "broadcast_batched_matmul": {
+    "K": 8,
+    "errors": {
+      "ideal_amd_xf32_vs_fp64": {
+        "actual_max_abs": 11.148585319519043,
+        "max_abs": 0.006085395812988281,
+        "max_rel": 0.13990430533885956,
+        "mean_signed": 8.288269600598142e-05,
+        "ref_max_abs": 11.147992134094238,
+        "rms_abs": 0.0016238541994425314,
+        "shape": [
+          3,
+          2,
+          8,
+          8
+        ]
+      },
+      "ideal_nv_tf32_vs_fp64": {
+        "actual_max_abs": 11.151329040527344,
+        "max_abs": 0.0034008026123046875,
+        "max_rel": 0.05859437957406044,
+        "mean_signed": -3.595563612179831e-05,
+        "ref_max_abs": 11.147992134094238,
+        "rms_abs": 0.0008270457072997571,
+        "shape": [
+          3,
+          2,
+          8,
+          8
+        ]
+      },
+      "mi300_fp32_vs_fp64": {
+        "actual_max_abs": 11.147992134094238,
+        "max_abs": 9.5367431640625e-07,
+        "max_rel": 2.9966540751047432e-06,
+        "mean_signed": -9.138602763414383e-09,
+        "ref_max_abs": 11.147992134094238,
+        "rms_abs": 1.8455260667364422e-07,
+        "shape": [
+          3,
+          2,
+          8,
+          8
+        ]
+      },
+      "mi300_tf32_vs_fp64": {
+        "actual_max_abs": 11.140080451965332,
+        "max_abs": 0.00814056396484375,
+        "max_rel": 0.10682284086942673,
+        "mean_signed": -5.981560025247745e-05,
+        "ref_max_abs": 11.147992134094238,
+        "rms_abs": 0.0022232903063499686,
+        "shape": [
+          3,
+          2,
+          8,
+          8
+        ]
+      },
+      "mi300_tf32_vs_ideal_amd": {
+        "actual_max_abs": 11.140080451965332,
+        "max_abs": 0.014225959777832031,
+        "max_rel": 0.12112972885370255,
+        "mean_signed": -0.00014269829262048006,
+        "ref_max_abs": 11.148585319519043,
+        "rms_abs": 0.002652259652815303,
+        "shape": [
+          3,
+          2,
+          8,
+          8
+        ]
+      },
+      "mi300_tf32_vs_ideal_nv": {
+        "actual_max_abs": 11.140080451965332,
+        "max_abs": 0.011248588562011719,
+        "max_rel": 0.17571301758289337,
+        "mean_signed": -2.385996049270034e-05,
+        "ref_max_abs": 11.151329040527344,
+        "rms_abs": 0.0026138517074784503,
+        "shape": [
+          3,
+          2,
+          8,
+          8
+        ]
+      }
+    },
+    "floor": {
+      "K": 8,
+      "rd_bias_estimate": 0.03382288915851284,
+      "symmetric_floor": 0.02391639428330539
+    },
+    "issue": null,
+    "op": "batched matmul",
+    "shapes": {
+      "A": [
+        3,
+        2,
+        8,
+        8
+      ],
+      "B": [
+        3,
+        2,
+        8,
+        8
+      ]
+    },
+    "test_id": "test/test_linalg.py::TestLinalg::test_broadcast_batched_matmul",
+    "tol_atol": 0.001,
+    "tol_origin": "tf32_on_and_off(0.001) + reduced_f32_on_and_off(0.001)",
+    "verdict_hint": "tolerance_below_e8m10_floor"
+  },
+  "cdist_large": {
+    "K": 10,
+    "errors": {
+      "donot_use_mm_for_euclid_dist_fp32_vs_fp64": {
+        "actual_max_abs": 9.855512619018555,
+        "max_abs": 9.5367431640625e-07,
+        "max_rel": 2.022564302706087e-07,
+        "mean_signed": -8.416176089376393e-11,
+        "ref_max_abs": 9.855512619018555,
+        "rms_abs": 1.9045175462623043e-07,
+        "shape": [
+          1000,
+          1000
+        ]
+      },
+      "donot_use_mm_for_euclid_dist_tf32_vs_fp64": {
+        "actual_max_abs": 9.855512619018555,
+        "max_abs": 9.5367431640625e-07,
+        "max_rel": 2.022564302706087e-07,
+        "mean_signed": -8.416176089376393e-11,
+        "ref_max_abs": 9.855512619018555,
+        "rms_abs": 1.9045175462623043e-07,
+        "shape": [
+          1000,
+          1000
+        ]
+      },
+      "use_mm_for_euclid_dist_fp32_vs_fp64": {
+        "actual_max_abs": 9.855512619018555,
+        "max_abs": 1.0728836059570312e-06,
+        "max_rel": 1.1092319027738995e-06,
+        "mean_signed": 1.8187165107264036e-09,
+        "ref_max_abs": 9.855512619018555,
+        "rms_abs": 1.8923100474164516e-07,
+        "shape": [
+          1000,
+          1000
+        ]
+      },
+      "use_mm_for_euclid_dist_if_necessary_fp32_vs_fp64": {
+        "actual_max_abs": 9.855512619018555,
+        "max_abs": 1.0728836059570312e-06,
+        "max_rel": 1.1092319027738995e-06,
+        "mean_signed": 1.8187165107264036e-09,
+        "ref_max_abs": 9.855512619018555,
+        "rms_abs": 1.8923100474164516e-07,
+        "shape": [
+          1000,
+          1000
+        ]
+      },
+      "use_mm_for_euclid_dist_if_necessary_tf32_vs_fp64": {
+        "actual_max_abs": 9.852352142333984,
+        "max_abs": 0.005789041519165039,
+        "max_rel": 0.006667789537459612,
+        "mean_signed": -0.0007486451650038362,
+        "ref_max_abs": 9.855512619018555,
+        "rms_abs": 0.0009680368188387203,
+        "shape": [
+          1000,
+          1000
+        ]
+      },
+      "use_mm_for_euclid_dist_tf32_vs_fp64": {
+        "actual_max_abs": 9.852352142333984,
+        "max_abs": 0.005789041519165039,
+        "max_rel": 0.006667789537459612,
+        "mean_signed": -0.0007486451650038362,
+        "ref_max_abs": 9.855512619018555,
+        "rms_abs": 0.0009680368188387203,
+        "shape": [
+          1000,
+          1000
+        ]
+      }
+    },
+    "floor": {
+      "K": 10,
+      "symmetric_floor": 0.012352647110032733
+    },
+    "issue": null,
+    "op": "cdist p=2 (three compute modes)",
+    "shapes": {
+      "x": [
+        1000,
+        10
+      ],
+      "y": [
+        1000,
+        10
+      ]
+    },
+    "test_id": "test/test_torch.py::TestTorchDeviceType::test_cdist_large",
+    "tol_atol": 0.005,
+    "tol_origin": "tf32_on_and_off(0.005) + reduced_f32_on_and_off(0.08)",
+    "verdict_hint": "see per-mode errors; use_mm modes use TF32 GEMM"
+  },
+  "compile_kernel_advanced": {
+    "K": 32,
+    "errors": {
+      "ideal_amd_xf32_vs_fp64": {
+        "actual_max_abs": 11.878826141357422,
+        "max_abs": 0.00817108154296875,
+        "max_rel": 0.0009185004746541381,
+        "mean_signed": -0.005330145359039307,
+        "ref_max_abs": 11.88586711883545,
+        "rms_abs": 0.005401433900717392,
+        "shape": [
+          64,
+          48
+        ]
+      },
+      "ideal_nv_tf32_vs_fp64": {
+        "actual_max_abs": 11.885200500488281,
+        "max_abs": 0.0018625259399414062,
+        "max_rel": 0.00020009148283861578,
+        "mean_signed": -1.3756875887338538e-05,
+        "ref_max_abs": 11.88586711883545,
+        "rms_abs": 0.0005046932754968241,
+        "shape": [
+          64,
+          48
+        ]
+      },
+      "mi300_fp32_vs_fp64": {
+        "actual_max_abs": 11.885868072509766,
+        "max_abs": 1.9073486328125e-06,
+        "max_rel": 2.2787436648741277e-07,
+        "mean_signed": -1.3659398057086491e-08,
+        "ref_max_abs": 11.88586711883545,
+        "rms_abs": 4.961586963800508e-07,
+        "shape": [
+          64,
+          48
+        ]
+      },
+      "mi300_tf32_vs_fp64": {
+        "actual_max_abs": 11.878828048706055,
+        "max_abs": 0.00817108154296875,
+        "max_rel": 0.0009185004746541381,
+        "mean_signed": -0.005330145359039307,
+        "ref_max_abs": 11.88586711883545,
+        "rms_abs": 0.005401435013365584,
+        "shape": [
+          64,
+          48
+        ]
+      },
+      "mi300_tf32_vs_ideal_amd": {
+        "actual_max_abs": 11.878828048706055,
+        "max_abs": 3.814697265625e-06,
+        "max_rel": 3.5142744536642567e-07,
+        "mean_signed": 4.656612873077393e-10,
+        "ref_max_abs": 11.878826141357422,
+        "rms_abs": 7.571295497126779e-07,
+        "shape": [
+          64,
+          48
+        ]
+      },
+      "mi300_tf32_vs_ideal_nv": {
+        "actual_max_abs": 11.878828048706055,
+        "max_abs": 0.00955963134765625,
+        "max_rel": 0.0010008527897298336,
+        "mean_signed": -0.005316388327628374,
+        "ref_max_abs": 11.885200500488281,
+        "rms_abs": 0.005434364245487244,
+        "shape": [
+          64,
+          48
+        ]
+      }
+    },
+    "floor": {
+      "K": 32,
+      "rd_bias_estimate": 0.015583399685120014,
+      "symmetric_floor": 0.005509563795644336
+    },
+    "issue": null,
+    "op": "matmul (vs naive CUDA kernel)",
+    "shapes": {
+      "A": [
+        64,
+        32
+      ],
+      "B": [
+        32,
+        48
+      ]
+    },
+    "test_id": "test/test_cuda.py::TestCompileKernel::test_compile_kernel_advanced",
+    "tol_atol": 0.005,
+    "tol_origin": "tf32_on_and_off(0.005)",
+    "verdict_hint": "mi300_matches_amd_xf32_exceeds_nvidia_tf32"
+  },
+  "conv2d_k1": {
+    "K": 3,
+    "errors": {
+      "bias_grad_mi300_fp32_vs_fp64": {
+        "actual_max_abs": 26.639020919799805,
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mean_signed": 0.0,
+        "ref_max_abs": 26.639020919799805,
+        "rms_abs": 0.0,
+        "shape": [
+          3
+        ]
+      },
+      "bias_grad_mi300_tf32_vs_fp64": {
+        "actual_max_abs": 26.639020919799805,
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mean_signed": 0.0,
+        "ref_max_abs": 26.639020919799805,
+        "rms_abs": 0.0,
+        "shape": [
+          3
+        ]
+      },
+      "forward_mi300_fp32_vs_fp64": {
+        "actual_max_abs": 1.7377781867980957,
+        "max_abs": 1.1920928955078125e-07,
+        "max_rel": 1.3620841627925984e-06,
+        "mean_signed": -1.8005569257795173e-09,
+        "ref_max_abs": 1.7377781867980957,
+        "rms_abs": 2.932310697940853e-08,
+        "shape": [
+          2,
+          3,
+          5,
+          5
+        ]
+      },
+      "forward_mi300_tf32_vs_cpu": {
+        "actual_max_abs": 1.736823320388794,
+        "max_abs": 0.0012359619140625,
+        "max_rel": 0.037717562168836594,
+        "mean_signed": -1.9858312043652404e-06,
+        "ref_max_abs": 1.7377781867980957,
+        "rms_abs": 0.0003287061987881952,
+        "shape": [
+          2,
+          3,
+          5,
+          5
+        ]
+      },
+      "forward_mi300_tf32_vs_fp64": {
+        "actual_max_abs": 1.736823320388794,
+        "max_abs": 0.0012359619140625,
+        "max_rel": 0.03771747276186943,
+        "mean_signed": -1.9843876088998513e-06,
+        "ref_max_abs": 1.7377781867980957,
+        "rms_abs": 0.00032870152798441377,
+        "shape": [
+          2,
+          3,
+          5,
+          5
+        ]
+      },
+      "weight_grad_mi300_fp32_vs_fp64": {
+        "actual_max_abs": 5.315976619720459,
+        "max_abs": 4.76837158203125e-07,
+        "max_rel": 3.2140189887286397e-07,
+        "mean_signed": 2.6490953430879927e-08,
+        "ref_max_abs": 5.315977096557617,
+        "rms_abs": 2.7957056521316944e-07,
+        "shape": [
+          3,
+          3,
+          1,
+          1
+        ]
+      },
+      "weight_grad_mi300_tf32_vs_cpu": {
+        "actual_max_abs": 5.314413070678711,
+        "max_abs": 0.005867958068847656,
+        "max_rel": 0.0012691746233031154,
+        "mean_signed": -0.0020626287441700697,
+        "ref_max_abs": 5.315977096557617,
+        "rms_abs": 0.0026428427291524796,
+        "shape": [
+          3,
+          3,
+          1,
+          1
+        ]
+      },
+      "weight_grad_mi300_tf32_vs_fp64": {
+        "actual_max_abs": 5.314413070678711,
+        "max_abs": 0.005867481231689453,
+        "max_rel": 0.0012693547178059816,
+        "mean_signed": -0.0020625393372029066,
+        "ref_max_abs": 5.315977096557617,
+        "rms_abs": 0.002642713311336907,
+        "shape": [
+          3,
+          3,
+          1,
+          1
+        ]
+      }
+    },
+    "floor": {
+      "K": 3,
+      "rd_bias_estimate": 0.00146484375,
+      "symmetric_floor": 0.0016914558667664816
+    },
+    "issue": null,
+    "op": "conv2d k=1 (forward + backward, cudnn disabled -> GEMM path)",
+    "shapes": {
+      "input": [
+        2,
+        3,
+        5,
+        5
+      ],
+      "weight": [
+        3,
+        3,
+        1,
+        1
+      ]
+    },
+    "test_id": "test/nn/test_convolution.py::TestConvolutionNNDeviceType::test_Conv2d_size_1_kernel",
+    "tol_atol": 0.005,
+    "tol_origin": "tf32_on_and_off(0.005); explicit assertEqual atol=1e-5 dominated by self.precision via max()",
+    "verdict_hint": "see per-component errors"
+  },
+  "inductor_padding_like": {
+    "K": 1024,
+    "errors": {
+      "high_vs_fp64": {
+        "actual_max_abs": 164.6207275390625,
+        "max_abs": 0.15484619140625,
+        "max_rel": 461.98785400390625,
+        "mean_signed": -2.3721528123132885e-05,
+        "ref_max_abs": 164.77557373046875,
+        "rms_abs": 0.024637423178344914,
+        "shape": [
+          1024,
+          1024
+        ]
+      },
+      "high_vs_highest": {
+        "actual_max_abs": 164.6207275390625,
+        "max_abs": 0.154937744140625,
+        "max_rel": 587.6046142578125,
+        "mean_signed": -2.3733562557026744e-05,
+        "ref_max_abs": 164.77566528320312,
+        "rms_abs": 0.02463741308461038,
+        "shape": [
+          1024,
+          1024
+        ]
+      },
+      "highest_vs_fp64": {
+        "actual_max_abs": 164.77566528320312,
+        "max_abs": 0.000217437744140625,
+        "max_rel": 0.5961982607841492,
+        "mean_signed": 1.203827437734617e-08,
+        "ref_max_abs": 164.77557373046875,
+        "rms_abs": 1.8329211083582437e-05,
+        "shape": [
+          1024,
+          1024
+        ]
+      }
+    },
+    "floor": {
+      "K": 1024,
+      "rd_bias_estimate": 12.53109220611941,
+      "symmetric_floor": 0.7831932628824632
+    },
+    "issue": null,
+    "op": "matmul under highest vs high precision",
+    "shapes": {
+      "A": [
+        1024,
+        1024
+      ],
+      "B": [
+        1024,
+        1024
+      ]
+    },
+    "test_id": "test/inductor/test_padding.py (representative 1024 GEMM)",
+    "tol_atol": 0.001,
+    "tol_origin": "varies; class forces highest on HIP",
+    "verdict_hint": "K=1024; 'high' = TF32 has notably higher error vs 'highest'"
+  },
+  "linear_no_bias_module": {
+    "K": 10,
+    "errors": {
+      "ideal_amd_xf32_vs_fp64": {
+        "actual_max_abs": 5.7996602058410645,
+        "max_abs": 0.0052089691162109375,
+        "max_rel": 0.0430186502635479,
+        "mean_signed": 0.00028827472124248743,
+        "ref_max_abs": 5.7944512367248535,
+        "rms_abs": 0.0015950567424734515,
+        "shape": [
+          4,
+          8
+        ]
+      },
+      "ideal_nv_tf32_vs_fp64": {
+        "actual_max_abs": 5.794467926025391,
+        "max_abs": 0.0022726915776729584,
+        "max_rel": 0.06034298241138458,
+        "mean_signed": 0.00014061725232750177,
+        "ref_max_abs": 5.7944512367248535,
+        "rms_abs": 0.0009320981495441991,
+        "shape": [
+          4,
+          8
+        ]
+      },
+      "mi300_fp32_vs_fp64": {
+        "actual_max_abs": 5.794451713562012,
+        "max_abs": 4.76837158203125e-07,
+        "max_rel": 4.055367753608152e-06,
+        "mean_signed": 6.868503987789154e-09,
+        "ref_max_abs": 5.7944512367248535,
+        "rms_abs": 1.575518705018164e-07,
+        "shape": [
+          4,
+          8
+        ]
+      },
+      "mi300_tf32_vs_fp64": {
+        "actual_max_abs": 5.790457725524902,
+        "max_abs": 0.003993511199951172,
+        "max_rel": 0.010240182280540466,
+        "mean_signed": 0.00037716852966696024,
+        "ref_max_abs": 5.7944512367248535,
+        "rms_abs": 0.0018085805944219934,
+        "shape": [
+          4,
+          8
+        ]
+      },
+      "mi300_tf32_vs_ideal_amd": {
+        "actual_max_abs": 5.790457725524902,
+        "max_abs": 0.00920248031616211,
+        "max_rel": 0.034794341772794724,
+        "mean_signed": 8.889380842447281e-05,
+        "ref_max_abs": 5.7996602058410645,
+        "rms_abs": 0.00286719491669142,
+        "shape": [
+          4,
+          8
+        ]
+      },
+      "mi300_tf32_vs_ideal_nv": {
+        "actual_max_abs": 5.790457725524902,
+        "max_abs": 0.0040743350982666016,
+        "max_rel": 0.06607682257890701,
+        "mean_signed": 0.00023655127733945847,
+        "ref_max_abs": 5.794467926025391,
+        "rms_abs": 0.0019910448609894702,
+        "shape": [
+          4,
+          8
+        ]
+      }
+    },
+    "floor": {
+      "K": 10,
+      "rd_bias_estimate": 0.020774092128241772,
+      "symmetric_floor": 0.013138689489483749
+    },
+    "issue": "https://github.com/pytorch/pytorch/issues/155216",
+    "op": "linear (no bias) = matmul(input, W.T)",
+    "shapes": {
+      "input": [
+        4,
+        10
+      ],
+      "weight": [
+        8,
+        10
+      ]
+    },
+    "test_id": "common_nn.py:: Linear no-bias module test",
+    "tol_atol": 0.005,
+    "tol_origin": "tf32_precision=0.005 in module test dict",
+    "verdict_hint": "passes"
+  },
+  "lstm_short": {
+    "K": 7,
+    "errors": {
+      "h_mi300_fp32_vs_fp64": {
+        "actual_max_abs": 0.3406023383140564,
+        "max_abs": 2.2351741790771484e-08,
+        "max_rel": 4.537087534117745e-06,
+        "mean_signed": 3.5652192309498787e-10,
+        "ref_max_abs": 0.3406023383140564,
+        "rms_abs": 9.820397484779282e-09,
+        "shape": [
+          1,
+          2,
+          4
+        ]
+      },
+      "h_mi300_tf32_vs_fp64": {
+        "actual_max_abs": 0.3406023383140564,
+        "max_abs": 2.2351741790771484e-08,
+        "max_rel": 4.537087534117745e-06,
+        "mean_signed": 3.5652192309498787e-10,
+        "ref_max_abs": 0.3406023383140564,
+        "rms_abs": 9.820397484779282e-09,
+        "shape": [
+          1,
+          2,
+          4
+        ]
+      },
+      "out_mi300_fp32_vs_fp64": {
+        "actual_max_abs": 0.3632029592990875,
+        "max_abs": 2.9802322387695312e-08,
+        "max_rel": 4.537087534117745e-06,
+        "mean_signed": -2.9831426218152046e-10,
+        "ref_max_abs": 0.3632029592990875,
+        "rms_abs": 8.308595650574882e-09,
+        "shape": [
+          7,
+          2,
+          4
+        ]
+      },
+      "out_mi300_tf32_vs_fp64": {
+        "actual_max_abs": 0.3632029592990875,
+        "max_abs": 2.9802322387695312e-08,
+        "max_rel": 4.537087534117745e-06,
+        "mean_signed": -2.9831426218152046e-10,
+        "ref_max_abs": 0.3632029592990875,
+        "rms_abs": 8.308595650574882e-09,
+        "shape": [
+          7,
+          2,
+          4
+        ]
+      }
+    },
+    "floor": {
+      "K": 7,
+      "note": "compounds across seq=7 timesteps",
+      "symmetric_floor": 0.0025837415147115144
+    },
+    "issue": null,
+    "op": "LSTM (forward, seq=7)",
+    "shapes": {
+      "hidden": 4,
+      "input": [
+        7,
+        2,
+        3
+      ]
+    },
+    "test_id": "test/test_nn.py::TestNNDeviceType::test_variable_sequence",
+    "tol_atol": 0.005,
+    "tol_origin": "tf32_on_and_off(0.005)",
+    "verdict_hint": "compounding error across timesteps; K=7 per gate GEMM"
+  },
+  "old_cholesky": {
+    "K": 10,
+    "errors": {
+      "recon_fp32_vs_input": {
+        "actual_max_abs": 20.01468849182129,
+        "max_abs": 1.9073486328125e-06,
+        "max_rel": 1.1572699349926552e-06,
+        "mean_signed": -6.314367251292197e-09,
+        "ref_max_abs": 20.014686584472656,
+        "rms_abs": 3.0831118396675427e-07,
+        "shape": [
+          10,
+          10
+        ]
+      },
+      "recon_ideal_amd_vs_input": {
+        "actual_max_abs": 20.004653930664062,
+        "max_abs": 0.017701148986816406,
+        "max_rel": 0.0334726981818676,
+        "mean_signed": -0.0017262195469811559,
+        "ref_max_abs": 20.014686584472656,
+        "rms_abs": 0.003574272251358789,
+        "shape": [
+          10,
+          10
+        ]
+      },
+      "recon_ideal_nv_vs_input": {
+        "actual_max_abs": 20.004653930664062,
+        "max_abs": 0.01003265380859375,
+        "max_rel": 0.03794901818037033,
+        "mean_signed": 0.00010276097600581124,
+        "ref_max_abs": 20.014686584472656,
+        "rms_abs": 0.0015687673146748903,
+        "shape": [
+          10,
+          10
+        ]
+      },
+      "recon_tf32_vs_input": {
+        "actual_max_abs": 20.004653930664062,
+        "max_abs": 0.02117156982421875,
+        "max_rel": 0.0018370416946709156,
+        "mean_signed": -0.0013100586365908384,
+        "ref_max_abs": 20.014686584472656,
+        "rms_abs": 0.004027938641408437,
+        "shape": [
+          10,
+          10
+        ]
+      }
+    },
+    "floor": {
+      "K": 10,
+      "cond": 30.38656280984885,
+      "rd_bias_estimate": 0.1483718887199651,
+      "symmetric_floor": 0.09383862181922688
+    },
+    "issue": null,
+    "op": "cholesky reconstruct = mm(C, C.T)",
+    "shapes": {
+      "A": [
+        10,
+        10
+      ]
+    },
+    "test_id": "test/test_linalg.py::TestLinalg::test_old_cholesky [float32]",
+    "tol_atol": 0.01,
+    "tol_origin": "max(self.precision=0.01 from tf32_on_and_off, explicit atol=1e-14)",
+    "verdict_hint": "recon error scales as cond(A) ~= 3.04e+01"
+  },
+  "tensordot": {
+    "K": 20,
+    "errors": {
+      "arange_fp32_vs_fp64": {
+        "actual_max_abs": 5306.0,
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mean_signed": 0.0,
+        "ref_max_abs": 5306.0,
+        "rms_abs": 0.0,
+        "shape": [
+          5,
+          2
+        ]
+      },
+      "arange_tf32_vs_fp64": {
+        "actual_max_abs": 5306.0,
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mean_signed": 0.0,
+        "ref_max_abs": 5306.0,
+        "rms_abs": 0.0,
+        "shape": [
+          5,
+          2
+        ]
+      },
+      "random_K20_fp32_vs_fp64": {
+        "actual_max_abs": 15.789542198181152,
+        "max_abs": 1.9073486328125e-06,
+        "max_rel": 1.5635669114999473e-05,
+        "mean_signed": -3.5165744094456386e-08,
+        "ref_max_abs": 15.789543151855469,
+        "rms_abs": 3.5900444426096423e-07,
+        "shape": [
+          2,
+          3,
+          6,
+          7
+        ]
+      },
+      "random_K20_tf32_vs_fp64": {
+        "actual_max_abs": 15.776664733886719,
+        "max_abs": 0.01287841796875,
+        "max_rel": 0.07308538258075714,
+        "mean_signed": -0.00011258668382652104,
+        "ref_max_abs": 15.789543151855469,
+        "rms_abs": 0.003282697231248906,
+        "shape": [
+          2,
+          3,
+          6,
+          7
+        ]
+      }
+    },
+    "floor": {
+      "K": 20,
+      "rd_bias_estimate": 0.09619575347649789,
+      "symmetric_floor": 0.0430200487840522
+    },
+    "issue": null,
+    "op": "tensordot (matmul reduction)",
+    "shapes": {
+      "arange": "60 -> (3,4,5) tensordot (4,3,2) -> (5,2)",
+      "random": "(2,3,4,5) tensordot (4,5,6,7) dims=2 -> (2,3,6,7)"
+    },
+    "test_id": "test/test_linalg.py::TestLinalg::test_tensordot",
+    "tol_atol": 0.005,
+    "tol_origin": "tf32_on_and_off(0.005)",
+    "verdict_hint": "K=20 contraction; arange has very small values"
+  },
+  "transformer_encoder_fastpath": {
+    "K": 12,
+    "errors": {
+      "fast_fp32_vs_fp64": {
+        "actual_max_abs": 2.170988082885742,
+        "max_abs": 2.384185791015625e-07,
+        "max_rel": 8.745356353756506e-06,
+        "mean_signed": 1.751274503192235e-08,
+        "ref_max_abs": 2.1709883213043213,
+        "rms_abs": 8.528726455367671e-08,
+        "shape": [
+          3,
+          5,
+          12
+        ]
+      },
+      "fast_tf32_vs_fp64": {
+        "actual_max_abs": 2.1707510948181152,
+        "max_abs": 0.0025538206100463867,
+        "max_rel": 0.4864920675754547,
+        "mean_signed": 1.9164549058814373e-08,
+        "ref_max_abs": 2.1709883213043213,
+        "rms_abs": 0.0007449350153089226,
+        "shape": [
+          3,
+          5,
+          12
+        ]
+      },
+      "fast_vs_slow_fp32": {
+        "actual_max_abs": 2.170988082885742,
+        "max_abs": 2.384185791015625e-07,
+        "max_rel": 2.0167317416053265e-06,
+        "mean_signed": 5.2587387777691674e-09,
+        "ref_max_abs": 2.1709883213043213,
+        "rms_abs": 7.108084413503918e-08,
+        "shape": [
+          3,
+          5,
+          12
+        ]
+      },
+      "fast_vs_slow_tf32": {
+        "actual_max_abs": 2.1707510948181152,
+        "max_abs": 0.0003470182418823242,
+        "max_rel": 0.017870968207716942,
+        "mean_signed": 1.1499893481925483e-08,
+        "ref_max_abs": 2.170757293701172,
+        "rms_abs": 0.00011462196248128482,
+        "shape": [
+          3,
+          5,
+          12
+        ]
+      },
+      "slow_fp32_vs_fp64": {
+        "actual_max_abs": 2.1709883213043213,
+        "max_abs": 2.384185791015625e-07,
+        "max_rel": 9.883450729830656e-06,
+        "mean_signed": 1.2254005810063973e-08,
+        "ref_max_abs": 2.1709883213043213,
+        "rms_abs": 9.15126361344362e-08,
+        "shape": [
+          3,
+          5,
+          12
+        ]
+      },
+      "slow_tf32_vs_fp64": {
+        "actual_max_abs": 2.170757293701172,
+        "max_abs": 0.002663254737854004,
+        "max_rel": 0.48658090829849243,
+        "mean_signed": 7.665302170778432e-09,
+        "ref_max_abs": 2.1709883213043213,
+        "rms_abs": 0.0008055036262272153,
+        "shape": [
+          3,
+          5,
+          12
+        ]
+      },
+      "tf32_vs_fp32_fast": {
+        "actual_max_abs": 2.1707510948181152,
+        "max_abs": 0.0025539398193359375,
+        "max_rel": 0.48649656772613525,
+        "mean_signed": 1.6530975477380139e-09,
+        "ref_max_abs": 2.170988082885742,
+        "rms_abs": 0.0007449330975759033,
+        "shape": [
+          3,
+          5,
+          12
+        ]
+      },
+      "tf32_vs_fp32_slow": {
+        "actual_max_abs": 2.170757293701172,
+        "max_abs": 0.0026633739471435547,
+        "max_rel": 0.48658597469329834,
+        "mean_signed": -4.589350677264292e-09,
+        "ref_max_abs": 2.1709883213043213,
+        "rms_abs": 0.000805500276731181,
+        "shape": [
+          3,
+          5,
+          12
+        ]
+      }
+    },
+    "floor": {
+      "K": 12,
+      "symmetric_floor": 0.0033829117335329633
+    },
+    "issue": null,
+    "op": "TransformerEncoder (fastpath vs slowpath; same weights/input)",
+    "shapes": {
+      "input": [
+        3,
+        5,
+        12
+      ],
+      "nhead": 4
+    },
+    "test_id": "test/test_transformers.py::TestTransformers::test_transformerencoder_fastpath",
+    "tol_atol": 0.001,
+    "tol_origin": "tf32_on_and_off(0.001)",
+    "verdict_hint": "compares fastpath vs slowpath under same weights"
+  }
+}
