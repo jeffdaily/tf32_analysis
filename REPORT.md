@@ -149,6 +149,19 @@ and `test_Linear_cuda_tf32` respectively. Both are matmul-flavored tests
 with tolerance ~0.005–0.01 and reported `max_abs` of 0.043 and 0.006 —
 fully consistent with category 2.)
 
+`test_rnn_fused` (input=10, hidden=6, 2 layers, seq=7, batch=6 — the
+largest non-MFMA RNN case in this PR's inventory) forces the Python
+slowpath via `cudnn.flags(enabled=False)` and then compares GPU
+output + gradients against a CPU reference. Output delta under
+TF32 is 2e-4–7e-4 (comfortably under the 5e-3 `@tf32_on_and_off`
+floor), but the test's gradient assertion uses an explicit
+`atol=5e-5, rtol=0` which is NOT governed by `self.precision` —
+so the `@tf32_on_and_off(0.005)` decorator was effectively a no-op
+for gradients. TF32 gradient drift measured at 2.2e-3 to 3.1e-3
+(50-60× over the explicit atol). Disposition:
+`@with_highest_f32_precision` — the test's intent is CPU/GPU
+slowpath correctness, not TF32 precision.
+
 ---
 
 ## 3. Per-Test Deep Dives
