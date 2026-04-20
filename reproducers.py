@@ -447,8 +447,20 @@ def repro_tensordot() -> dict:
         v_fp32 = torch.tensordot(a_d, b_d, dims=2).to("cpu")
     with tf32_mode(True):
         v_tf32 = torch.tensordot(a_d, b_d, dims=2).to("cpu")
+
+    # Ideal NV-TF32 / AMD-XF32 references. tensordot(dims=2) on these shapes
+    # reduces to a single K=20 GEMM: (2*3, 4*5) @ (4*5, 6*7).
+    a_mat = a.reshape(2 * 3, 4 * 5)
+    b_mat = b.reshape(4 * 5, 6 * 7)
+    out_shape = (2, 3, 6, 7)
+    nv = gemm_ideal_nvidia_tf32(a_mat, b_mat).reshape(out_shape)
+    amd = gemm_ideal_amd_xf32(a_mat, b_mat).reshape(out_shape)
+
     out["random_K20_fp32_vs_fp64"] = error_stats(v_fp32, truth_rand)
     out["random_K20_tf32_vs_fp64"] = error_stats(v_tf32, truth_rand)
+    out["random_K20_ideal_nv_tf32_vs_fp64"] = error_stats(nv, truth_rand)
+    out["random_K20_ideal_amd_xf32_vs_fp64"] = error_stats(amd, truth_rand)
+    out["random_K20_mi300_tf32_vs_ideal_amd"] = error_stats(v_tf32, amd)
 
     return {
         "test_id": "test/test_linalg.py::TestLinalg::test_tensordot",

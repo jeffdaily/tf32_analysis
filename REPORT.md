@@ -137,7 +137,7 @@ effective floor when no explicit `atol` is larger.
 | `test_Conv2d_size_1_kernel` (forward) | 3 | 0.005 | 1.2e-3 | 0.5e-3 | 1.9e-3 | 2.4e-3 | passes (K=3 too small to break tol) |
 | `test_Conv2d_size_1_kernel` (weight grad) | 25/batch | 0.005 | **5.9e-3** | 2.7e-3 | 1.2e-2 | 8.4e-3 | **(2)** — NV-TF32 would pass; AMD RD-bias dominates |
 | `test_cdist_large` (use_mm modes) | 10 | 0.005 | **5.8e-3** | — | — | — | **(2)** — only mm-path modes affected; brute force = exact |
-| `test_tensordot` (random K=20) | 20 | 0.005 | **1.3e-2** | — | — | — | **(2)** — K=20 contraction over multi-dim |
+| `test_tensordot` (random K=20) | 20 | 0.005 | **1.3e-2** | **5.2e-3** | 1.0e-2 | 1.6e-2 | **(1/2) borderline** — NV-TF32 also marginally exceeds 0.005 |
 | `test_old_cholesky` (recon, fp32) | 10 | 0.01 | **2.1e-2** | 1.0e-2 | 1.8e-2 | — | **(3)** — amplified by `cond(A)≈30` |
 | `test_affine_2d_rotateRandom` | 3 | 0.005 | **9.1e-2** | — | — | — | **(3)** — bilinear interp amplifies grid drift |
 | `test_variable_sequence` (LSTM) | 7 | 0.005 | 3.0e-8 | — | — | — | passes — tiny LSTM doesn't dispatch to MFMA |
@@ -290,13 +290,37 @@ character of that noise across modes).
 ### 3.4 tensordot
 
 `test_tensordot` has two cases. The deterministic `arange`-based case
-produces zero error on TF32 (the operands and result are integer-valued
-in a representable range). The random `(2,3,4,5) ⊗ (4,5,6,7)` case
-contracts K=20 dims and produces `max_abs = 1.3e-2`, vs tolerance 0.005.
-K=20 random GEMM has floor `sqrt(20) * 2^-10 * |A|*|B| ~= 8e-3`
-for randn operands, fully consistent with measured.
+produces zero error on TF32 (operands are integer-valued in a
+representable range; TF32 rounds exactly). The random
+`(2,3,4,5) ⊗ (4,5,6,7)` case contracts K=20 dims — reducing to a
+single `(6, 20) @ (20, 42)` GEMM — against a tolerance of 0.005.
 
-**Verdict:** Category 2.
+| reference | max_abs | mean_signed |
+|---|---:|---:|
+| MI300 TF32 vs FP64 | **1.29e-2** | -1.1e-4 |
+| Ideal NV-TF32 vs FP64 | **5.18e-3** | +6.8e-5 |
+| Ideal AMD-XF32 vs FP64 | 1.03e-2 | -3.5e-4 |
+
+**Ideal NV-TF32 also marginally exceeds 0.005** (by ~4% for this seed),
+placing the test at the boundary between Category 1 (tolerance below
+E8M10 floor, vendor-agnostic) and Category 2 (AMD XF32 envelope
+specifically). The K=20 floor `sqrt(20) * 2^-10 * |A|_inf * |B|_inf`
+is ~5-8e-3 for randn operands here, so whether a given seed produces
+a CUDA-side pass or fail depends on the realized `|A|_inf * |B|_inf`.
+MI300 TF32 is ~2.5× the ideal NV-TF32 error, consistent with the
+AMD round-down signature.
+
+**Verdict:** Category 1-leaning, with a ROCm-specific adjustment.
+Recommended disposition: vendor-agnostic bump to 0.01 (2× the measured
+NV-TF32 floor — closes the latent CUDA flake risk), plus a ROCm
+bump to 0.02 (1.5× the measured MI300 TF32 envelope — covers the
+AMD round-down bias):
+
+    @tf32_on_and_off(0.02 if TEST_WITH_ROCM else 0.01)
+
+This avoids forcing the test onto `"highest"` (which would hide
+genuine matmul regressions in the tensordot code path, since
+tensordot *is* effectively a matmul wrapper).
 
 ### 3.5 cholesky reconstruct
 
