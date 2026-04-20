@@ -392,9 +392,22 @@ amplifies sub-pixel coord drift via bilinear interp: a small coord
 change near a high-contrast edge in the input produces a much larger
 output change. This is intrinsic to the algorithm.
 
-**Verdict:** Category 3. The test should not run with TF32 on; even
-NV-TF32 would amplify similarly. Recommend `set_float32_matmul_precision
-("highest")` for these tests on any TF32-capable device.
+**Verdict:** Category 3, vendor-agnostic. The test verifies
+algorithmic correctness of affine_grid + grid_sample against a
+scipy CPU reference; matmul precision is incidental. Even ideal
+NV-TF32 at K=3 (~5e-4 grid drift) × ~90× bilinear-interp
+amplification at a step edge (corner values 2/4/6/8 in this test)
+lands at ~0.05 output drift — already over the 0.005 tolerance.
+A tolerance bump large enough to cover the worst amplification
+(say ~0.2) would be so loose it masks genuine algorithmic regressions.
+
+Chosen disposition: **`@with_highest_f32_precision`** across all
+three affine tests (`test_affine_2d_rotate90`,
+`test_affine_2d_rotateRandom`, `test_affine_3d_rotateRandom`).
+affine_grid's small matmul is tested thoroughly elsewhere; nothing
+uniquely TF32-related gets lost here. The CPU mkldnn reduced-f32
+path would amplify identically, so the unified decorator covers
+that too.
 
 ### 3.7 LSTM and Transformer
 
